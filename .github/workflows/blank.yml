@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mini Standoff 2 2D</title>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: #222;
+  }
+  canvas {
+    display: block;
+    background: #444;
+  }
+  .joystick {
+    position: absolute;
+    bottom: 50px;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    touch-action: none;
+  }
+  #joystick-left { left: 50px; }
+  #joystick-right { right: 50px; }
+</style>
+</head>
+<body>
+
+<canvas id="gameCanvas" width="800" height="500"></canvas>
+<div class="joystick" id="joystick-left"></div>
+<div class="joystick" id="joystick-right"></div>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+let player = { x: 400, y: 250, angle: 0 };
+let bullets = [];
+
+// Joystick simples
+let move = { x: 0, y: 0 };
+let shoot = { x: 0, y: 0 };
+
+function drawPlayer() {
+  ctx.save();
+  ctx.translate(player.x, player.y);
+  ctx.rotate(player.angle);
+  ctx.fillStyle = "lime";
+  ctx.fillRect(-15, -10, 30, 20);
+  ctx.restore();
+}
+
+function drawBullets() {
+  ctx.fillStyle = "red";
+  bullets.forEach(b => ctx.fillRect(b.x-5, b.y-5, 10, 10));
+}
+
+function update() {
+  // Movimento
+  player.x += move.x * 3;
+  player.y += move.y * 3;
+
+  // Limite da tela
+  player.x = Math.max(0, Math.min(canvas.width, player.x));
+  player.y = Math.max(0, Math.min(canvas.height, player.y));
+
+  // Disparo
+  bullets.forEach((b, i) => {
+    b.x += b.vx;
+    b.y += b.vy;
+    if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) bullets.splice(i,1);
+  });
+
+  // Rotacionar para a direção do joystick de tiro
+  if (shoot.x !== 0 || shoot.y !== 0) {
+    player.angle = Math.atan2(shoot.y, shoot.x);
+    // Atirar
+    if (!player.lastShot || Date.now() - player.lastShot > 300) {
+      bullets.push({
+        x: player.x,
+        y: player.y,
+        vx: Math.cos(player.angle)*5,
+        vy: Math.sin(player.angle)*5
+      });
+      player.lastShot = Date.now();
+    }
+  }
+}
+
+function draw() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  drawPlayer();
+  drawBullets();
+}
+
+function gameLoop() {
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+
+// Joystick touch
+function joystick(id, callback) {
+  const stick = document.getElementById(id);
+  let rect = stick.getBoundingClientRect();
+  let center = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
+
+  let active = false;
+  stick.addEventListener("touchstart", e => { active = true; });
+  stick.addEventListener("touchend", e => { active = false; callback({x:0,y:0}); });
+  stick.addEventListener("touchmove", e => {
+    if(!active) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - center.x;
+    const dy = touch.clientY - center.y;
+    const mag = Math.sqrt(dx*dx+dy*dy);
+    callback({ x: dx/mag, y: dy/mag });
+  });
+}
+
+joystick("joystick-left", v => move=v);
+joystick("joystick-right", v => shoot=v);
+</script>
+</body>
+</html>
