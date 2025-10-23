@@ -6,7 +6,6 @@
 <title>Mini Standoff 2 2D</title>
 <style>
   body {
-    margin: 0;
     overflow: hidden;
     background: #222;
   }
